@@ -1,0 +1,87 @@
+.exercise-modal .exercise-lastset { display:flex; align-items:center; gap:8px; margin-left:8px }
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+/* Exercise modal layout */
+.exercise-modal .exercise-modal-layout {
+	display: flex;
+	gap: 16px;
+	align-items: stretch;
+}
+.exercise-modal .exercise-task-list {
+	width: 40%;
+	min-width: 220px;
+	background: var(--background-modifier-hover);
+	border-radius: 6px;
+	padding: 8px;
+	box-sizing: border-box;
+}
+.exercise-modal .exercise-task-list.is-collapsed { transform: translateX(-120%); opacity: 0.15; transition: transform .45s cubic-bezier(.2,.9,.3,1), opacity .45s ease; }
+
+.exercise-modal .exercise-modal-layout.is-expanded .exercise-task-list {
+	width: 0; min-width: 0; opacity: 0; transform: translateX(-40px);
+}
+.exercise-modal .exercise-modal-layout.is-expanded .exercise-details { flex: 1 1 100%; }
+.exercise-modal .exercise-details {
+	flex: 1;
+	background: var(--background-secondary);
+	padding: 12px;
+	border-radius: 6px;
+}
+.exercise-modal .exercise-list-item {
+	padding: 6px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	margin-bottom: 4px;
+}
+.exercise-modal .exercise-list-item:hover {
+	background: rgba(0,0,0,0.06);
+	transform: translateX(2px);
+	transition: transform .12s ease, background .12s ease;
+}
+.exercise-modal .exercise-list-item.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-accent);
+}
+.exercise-modal .exercise-list-item.is-active div { color: white; font-weight:700 }
+.exercise-modal .exercise-header {
+	display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+}
+.exercise-modal .exercise-prefill-header { display:flex; gap:8px; justify-content:space-between; align-items:center }
+.exercise-modal .exercise-change-btn { background: transparent; border: 1px solid var(--background-modifier-border); padding:4px 8px; border-radius:6px }
+.exercise-modal .exercise-change-btn:hover { transform: translateY(-2px); }
+.exercise-modal .exercise-reveal { margin-bottom:10px; }
+.exercise-modal .exercise-header button.exercise-refresh { border:none; background:transparent; cursor:pointer; }
+.exercise-modal .exercise-form label { display:block; font-size:0.85em; margin-top:8px; }
+.exercise-modal .exercise-form input { width:100%; padding:6px; margin-top:4px; box-sizing:border-box }
+.exercise-modal .exercise-actions { display:flex; gap:8px; margin-top:12px }
+.exercise-modal .exercise-actions .mod-cta { background: var(--interactive-accent); color: var(--text-accent); border: none; padding:8px 12px; border-radius:4px; cursor:pointer }
+.exercise-modal .exercise-actions .mod-cta { box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
+.exercise-modal .exercise-toggle-show { position: absolute; left: 10px; bottom: 10px; display:block; opacity:0.9 }
+.exercise-modal .exercise-actions button { padding:8px 10px; border-radius:4px }
+.exercise-modal .exercise-preview { font-style:italic; font-size:0.85em; margin-top: 8px; color:var(--text-muted)}
+
+/* small controls */
+.exercise-modal .exercise-form-row { display:flex; gap:8px; align-items:center }
+.exercise-modal .exercise-field { flex:1 }
+.exercise-modal .exercise-slider-row { display:flex; gap:8px; align-items:center; margin-top:6px }
+.exercise-modal input[type="range"] { -webkit-appearance:none; height:6px; border-radius:8px; background: linear-gradient(90deg,var(--interactive-accent), #ddd); }
+.exercise-modal input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; background:var(--interactive-accent); box-shadow: 0 4px 10px rgba(0,0,0,0.25); border-radius:50%; }
+.exercise-modal .exercise-inc-row button { width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px }
+.exercise-modal select { border-radius:6px; padding:6px 8px }
+
+.exercise-modal .exercise-task-list { transition: transform .45s cubic-bezier(.2,.9,.3,1), opacity .45s ease, width .3s ease }
+.exercise-modal .exercise-details { transition: all .35s cubic-bezier(.2,.9,.3,1); }
+.exercise-modal .exercise-refresh { background: transparent; border: 1px solid var(--background-modifier-border); padding:3px 6px; border-radius:6px }
+.exercise-modal .exercise-toggle-show { background: transparent; border: 1px solid var(--background-modifier-border); padding: 4px 8px; border-radius:6px }
+.exercise-modal .exercise-reveal button { background: var(--background-modifier-hover); border-radius:6px; padding:6px 8px }
+.exercise-modal .exercise-inc-row { display:flex; gap:4px; }
+.exercise-modal button { transition: transform .12s ease, background .12s ease }
+.exercise-modal button:hover { transform: translateY(-2px) }
+
