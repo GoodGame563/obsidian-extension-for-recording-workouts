@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, setIcon } from 'obsidian';
 
 
 interface MyPluginSettings {
@@ -9,6 +9,8 @@ interface MyPluginSettings {
 	modalSize?: 'small' | 'normal' | 'large';
 	// Spacing inside modal: 'compact' | 'normal' | 'spacious'
 	modalSpacing?: 'compact' | 'normal' | 'spacious';
+	// store collapsed groups by normalized tag name (lowercase)
+	collapsedGroups?: string[];
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
@@ -16,6 +18,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	rememberedExercise: '',
 	modalSize: 'normal',
 	modalSpacing: 'normal'
+	,collapsedGroups: []
 }
 
 export default class MyPlugin extends Plugin {
@@ -44,7 +47,7 @@ export default class MyPlugin extends Plugin {
 		});
 
 		// Add a ribbon icon for quick exercise logging
-		const exerciseIcon = this.addRibbonIcon('dice', 'Log exercise set', (_evt: MouseEvent) => {
+		const exerciseIcon = this.addRibbonIcon('notepad-text', 'Log exercise set', (_evt: MouseEvent) => {
 			new ExerciseModal(this.app, this).open();
 		});
 
@@ -74,7 +77,7 @@ export default class MyPlugin extends Plugin {
 
 class ExerciseModal extends Modal {
 	plugin: MyPlugin;
-	tasks: {lineIndex: number, text: string, exerciseName?: string}[] = [];
+	tasks: {lineIndex: number, text: string, exerciseName?: string, tag?: string}[] = [];
 	selectedIndex: number = -1;
 	layoutEl: HTMLElement | null = null;
 	leftEl: HTMLElement | null = null;
@@ -106,15 +109,19 @@ class ExerciseModal extends Modal {
 		const lines = txt.split('\n');
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
-			// skip already done tasks ([-] with x/X) and only include unchecked tasks
-			// skip already done tasks ([-] with x/X or check symbol) and only include unchecked tasks
 			if (/^\s*[-*]\s*\[[xX]\]/.test(line) || line.includes('✅')) continue;
+			const startDateRow = line.match(/🛫\s*(\d{4}-\d{1,2}-\d{1,2})/g);
+			const startDate = startDateRow ? Date.parse(startDateRow[0].slice(3,)) : Date.now();
+			if (startDate > Date.now()) continue;
 			const m = line.match(/^\s*[-*]\s*\[ \]\s*(.*)$/);
 			if (m) {
+				console.log(m[1]);
 				const content = m[1];
 				const linkMatch = content.match(/\[\[([^\]]+)\]\]/);
+				const tagMatch = content.match(/#([\p{L}\p{N}_]+)/gu);
 				const name = linkMatch ? linkMatch[1] : undefined;
-				this.tasks.push({lineIndex: i, text: content, exerciseName: name});
+				const tag = tagMatch ? tagMatch[0].slice(1,) : undefined;
+				this.tasks.push({lineIndex: i, text: content, exerciseName: name, tag: tag});
 			}
 		}
 	}
@@ -122,7 +129,6 @@ class ExerciseModal extends Modal {
 	async render() {
 		const {contentEl} = this;
 		contentEl.empty();
-		// for CSS scoping
 		contentEl.addClass('exercise-modal');
 
 		contentEl.createEl('h3', {text: 'Запись подхода'});
@@ -134,10 +140,8 @@ class ExerciseModal extends Modal {
 			return;
 		}
 
-		// layout left/right
 		const layout = contentEl.createDiv('exercise-modal-layout');
 		this.layoutEl = layout;
-		// Apply saved modal size and spacing
 		this.applyModalSettings(contentEl, layout);
 		const left = layout.createDiv('exercise-task-list');
 		const right = layout.createDiv('exercise-details');
@@ -150,39 +154,133 @@ class ExerciseModal extends Modal {
 		refreshBtn.addClass('exercise-refresh');
 		refreshBtn.onclick = async () => { await this.render(); };
 
+		// placeholder for Collapse/Expand all groups button
+		const toggleAllBtn = headerBar.createEl('button', {text: 'Свернуть все'});
+		toggleAllBtn.addClass('exercise-collapse-all');
+
+		// Collapse/Expand all groups
+        
+
 		const listWrap = left.createDiv('exercise-scroll');
 		listWrap.style.maxHeight = '300px';
 		listWrap.style.overflow = 'auto';
 
+		// Group tasks by tag so we can render them grouped in the UI
+		const groups = new Map<string, {index:number, task:{lineIndex:number, text:string, exerciseName?:string, tag?:string}}[]>();
 		this.tasks.forEach((t, i) => {
-			const item = listWrap.createDiv('exercise-list-item');
-			item.setAttr('data-index', String(i));
-			item.classList.toggle('is-active', i === this.selectedIndex);
-			const name = t.exerciseName ?? t.text;
-			item.createEl('div', {text: name});
-			item.tabIndex = 0;
-			item.style.cursor = 'pointer';
-			item.onclick = async () => {
-				this.selectedIndex = i;
-				listWrap.querySelectorAll('.exercise-list-item').forEach((n: any) => n.classList.remove('is-active'));
-				item.classList.add('is-active');
-				await this.prefillForSelected();
-				left.addClass('is-collapsed');
-				this.layoutEl?.addClass('is-expanded');
-				// hide the tasks list to focus on form
-					left.addClass('is-collapsed');
-					this.layoutEl?.addClass('is-expanded');
+			const tag = t.tag || 'Без тега';
+			if (!groups.has(tag)) groups.set(tag, []);
+			groups.get(tag)!.push({index: i, task: t});
+		});
+
+		// Render each group (sorted by tag, but place 'Без тега' at the end)
+		const tagNames = Array.from(groups.keys()).sort((a,b) => {
+			if (a === 'Без тега') return 1;
+			if (b === 'Без тега') return -1;
+			return a.localeCompare(b, 'ru');
+		});
+
+		const collapsedSet = new Set((this.plugin.settings.collapsedGroups || []).map(s => s.toLowerCase()));
+
+
+
+		const updateToggleAllLabel = () => {
+			const collapsed = new Set((this.plugin.settings.collapsedGroups || []).map(s => s.toLowerCase()));
+			const allCollapsed = tagNames.every(t => collapsed.has(t.toLowerCase()));
+			// toggleAllBtn.setText(allCollapsed ? 'Развернуть все' : 'Свернуть все');
+			setIcon(toggleAllBtn, allCollapsed ? "chevrons-left-right" : "chevrons-right-left");
+		};
+
+		toggleAllBtn.onclick = async () => {
+			const collapsed = new Set((this.plugin.settings.collapsedGroups || []).map(s => s.toLowerCase()));
+			const allCollapsed = tagNames.every(t => collapsed.has(t.toLowerCase()));
+			const groups = listWrap.querySelectorAll('.exercise-tag-group');
+			if (allCollapsed) {
+				// expand all
+				this.plugin.settings.collapsedGroups = [];
+				groups.forEach((g: any) => {
+					g.classList.remove('is-collapsed');
+					const header = g.previousElementSibling as HTMLElement | null;
+					if (header) {
+						header.classList.remove('is-collapsed');
+						const ic = header.querySelector('.exercise-tag-icon') as HTMLElement | null;
+						if (ic) ic.setText('▾');
+					}
+				});
+			} else {
+				// collapse all
+				this.plugin.settings.collapsedGroups = tagNames.map(t => t.toLowerCase());
+				groups.forEach((g: any) => {
+					g.classList.add('is-collapsed');
+					const header = g.previousElementSibling as HTMLElement | null;
+					if (header) {
+						header.classList.add('is-collapsed');
+						const ic = header.querySelector('.exercise-tag-icon') as HTMLElement | null;
+						if (ic) ic.setText('▸');
+					}
+				});
+			}
+			await this.plugin.saveSettings();
+			updateToggleAllLabel();
+		};
+
+		updateToggleAllLabel();
+
+		tagNames.forEach(tag => {
+			const group = groups.get(tag)!;
+			const tagHeader = listWrap.createDiv('exercise-tag-header');
+			const displayTag = tag === 'Без тега' ? tag : (tag.charAt(0).toUpperCase() + tag.slice(1).toLowerCase());
+			tagHeader.createEl('strong', {text: `${displayTag} (${group.length})`});
+			const groupWrap = listWrap.createDiv('exercise-tag-group');
+			const tagKey = tag.toLowerCase();
+			groupWrap.setAttr('data-tag', tagKey);
+			if (collapsedSet.has(tagKey)) groupWrap.classList.add('is-collapsed');
+			tagHeader.style.cursor = 'pointer';
+			const icon = tagHeader.createDiv('exercise-tag-icon');
+			icon.setText(groupWrap.classList.contains('is-collapsed') ? '▸' : '▾');
+			tagHeader.classList.toggle('is-collapsed', groupWrap.classList.contains('is-collapsed'));
+			icon.classList.toggle('is-collapsed', groupWrap.classList.contains('is-collapsed'));
+			tagHeader.onclick = async () => {
+				const nowCollapsed = groupWrap.classList.toggle('is-collapsed');
+				tagHeader.classList.toggle('is-collapsed', nowCollapsed);
+				icon.classList.toggle('is-collapsed', nowCollapsed);
+				icon.setText(nowCollapsed ? '▸' : '▾');
+				const set = new Set(this.plugin.settings.collapsedGroups || []);
+				if (nowCollapsed) set.add(tagKey); else set.delete(tagKey);
+				this.plugin.settings.collapsedGroups = Array.from(set);
+				await this.plugin.saveSettings();
+				updateToggleAllLabel();
 			};
-			item.onkeydown = async (ev: KeyboardEvent) => {
-				if (ev.key === 'Enter') {
+
+			group.forEach(g => {
+				const t = g.task;
+				const i = g.index;
+				const item = groupWrap.createDiv('exercise-list-item');
+				item.setAttr('data-index', String(i));
+				item.classList.toggle('is-active', i === this.selectedIndex);
+				const name = t.exerciseName ?? t.text;
+				item.createEl('div', {text: name});
+				item.tabIndex = 0;
+				item.style.cursor = 'pointer';
+				item.onclick = async () => {
 					this.selectedIndex = i;
 					listWrap.querySelectorAll('.exercise-list-item').forEach((n: any) => n.classList.remove('is-active'));
 					item.classList.add('is-active');
 					await this.prefillForSelected();
 					left.addClass('is-collapsed');
-				}
-
-			};
+					right.addClass('is-expanded');
+					this.layoutEl?.addClass('is-expanded');
+				};
+				item.onkeydown = async (ev: KeyboardEvent) => {
+					if (ev.key === 'Enter') {
+						this.selectedIndex = i;
+						listWrap.querySelectorAll('.exercise-list-item').forEach((n: any) => n.classList.remove('is-active'));
+						item.classList.add('is-active');
+						await this.prefillForSelected();
+						left.addClass('is-collapsed');
+					}
+				};
+			});
 		});
 
 		// placeholder for details (right column)
@@ -208,10 +306,6 @@ class ExerciseModal extends Modal {
 		toggleShow.addClass('exercise-toggle-show');
 		toggleShow.onclick = () => { left.removeClass('is-collapsed'); };
 
-		// add a right hand reveal to show tasks too
-		const reveal = right.createDiv('exercise-reveal');
-		const revealBtn = reveal.createEl('button', {text: 'Показать задачи'});
-		revealBtn.onclick = () => { left.removeClass('is-collapsed'); };
 	}
 
 	async prefillForSelected() {
@@ -229,6 +323,7 @@ class ExerciseModal extends Modal {
 			// reveal left side to change exercise
 			this.leftEl?.removeClass('is-collapsed');
 			this.layoutEl?.removeClass('is-expanded');
+			this.rightEl?.removeClass('is-expanded');
 		};
 
 		// find exercise file by name
@@ -251,25 +346,21 @@ class ExerciseModal extends Modal {
 			}
 		}
 
-		// create form
 		const form = details.createDiv('exercise-form');
 		const lineRow = form.createDiv('exercise-form-row');
 		const leftField = lineRow.createDiv('exercise-field');
 		const rightField = lineRow.createDiv('exercise-field');
 
-		// weight with slider and increment controls
 		leftField.createEl('div', {text: 'Вес (кг):'});
 		const weightInput = leftField.createEl('input') as HTMLInputElement;
 		weightInput.type = 'number';
 		weightInput.value = lastWeight;
 
-		// reps with a compact slider too
 		rightField.createEl('div', {text: 'Количество повторов:'});
 		const countInput = rightField.createEl('input') as HTMLInputElement;
 		countInput.type = 'number';
 		countInput.value = lastCount;
 
-		// preview area
 		const preview = details.createDiv('exercise-preview');
 		const updatePreview = () => {
 			const w = weightInput.value;
@@ -278,19 +369,28 @@ class ExerciseModal extends Modal {
 			preview.setText(`Добавится: | ${date} | ${w} | ${c} |`);
 		};
 
+		// track last interaction type to ignore rebound for wheel/scroll
+		let lastInteraction: 'wheel' | 'pointer' | 'keyboard' | '' = '';
+
 		// allow scrolling on the number input to change value using current step
 		weightInput.onwheel = (ev: WheelEvent) => {
 			ev.preventDefault();
 			const step = Number(stepSelector.value);
 			const delta = ev.deltaY > 0 ? -step : step;
 			weightInput.value = String(Number(weightInput.value || 0) + delta);
+			// mark a wheel interaction so the slider doesn't trigger rebound animation
+			lastInteraction = 'wheel';
+			setTimeout(() => { if (lastInteraction === 'wheel') lastInteraction = ''; }, 250);
 			slider.value = weightInput.value;
+			lastSliderValueNumber = Number(slider.value || 0);
 			updatePreview();
 		};
 		countInput.onwheel = (ev: WheelEvent) => {
 			ev.preventDefault();
 			const delta = ev.deltaY > 0 ? -1 : 1;
 			countInput.value = String(Number(countInput.value || 0) + delta);
+			lastInteraction = 'wheel';
+			setTimeout(() => { if (lastInteraction === 'wheel') lastInteraction = ''; }, 250);
 			repSlider.value = countInput.value;
 			updatePreview();
 		};
@@ -298,10 +398,11 @@ class ExerciseModal extends Modal {
 		// checkbox aligned with the inputs on one line
 		// put last set checkbox to the right of the form row
 		const lastBoxDiv = lineRow.createDiv('exercise-lastset');
+		const checkBoxDiv = lastBoxDiv.createDiv();
 		const lastSetLabel = lastBoxDiv.createEl('label');
-		const lastSetCheck = lastSetLabel.createEl('input') as HTMLInputElement;
+		const lastSetCheck = checkBoxDiv.createEl('input') as HTMLInputElement;
 		lastSetCheck.type = 'checkbox';
-		lastSetLabel.appendText(' Последний подход');
+		lastSetLabel.appendText('Последний подход');
 
 		const actions = details.createDiv('exercise-actions');
 		const saveBtn = actions.createEl('button', {text: 'Сохранить подход'});
@@ -312,17 +413,98 @@ class ExerciseModal extends Modal {
 		// ensure preview shows initial values
 		updatePreview();
 
-		weightInput.oninput = updatePreview;
+		weightInput.oninput = () => { updatePreview(); setSliderMax(computeDynamicMax(Number(weightInput.value || '0'), Number(slider.step)) ); };
+		
+
+
 		countInput.oninput = updatePreview;
 
 		const sliderRow = leftField.createDiv('exercise-slider-row');
 		const slider = sliderRow.createEl('input') as HTMLInputElement;
 		slider.type = 'range';
 		slider.min = '0';
+		// dynamic max - computed from last weight/get default
 		slider.max = '300';
 		slider.step = '1';
 		slider.value = weightInput.value || '0';
-		slider.oninput = () => { weightInput.value = slider.value; updatePreview(); };
+
+		/**
+		 * Compute a sensible slider max based on a reference weight.
+		 * If weight is small we keep a small max (e.g., weight 20 -> max 40). Otherwise
+		 * increase to fit a comfortable range. This keeps UI compact for small loads.
+		 */
+		const computeDynamicMax = (ref: number, step: number) => {
+			if (!Number.isFinite(ref) || ref <= 0) return Math.max(40, Math.round(300 / step) * step);
+			// small weights: prefer small ceilings
+			if (ref <= 10) return Math.max(20, Math.ceil(ref * 2 / step) * step);
+			if (ref <= 20) return Math.max(40, Math.ceil(ref * 2 / step) * step);
+			if (ref <= 30) return Math.max(60, Math.ceil(ref * 2 / step) * step);
+			// medium weights: allow 1.5x
+			if (ref <= 80) return Math.max(100, Math.ceil(ref * 1.5 / step) * step);
+			// large weights: keep a wide range
+			return Math.max(300, Math.ceil(ref * 1.25 / step) * step);
+		};
+
+		// helper to set slider max and update CSS tick count
+		const setSliderMax = (maxVal: number) => {
+			slider.max = String(maxVal);
+			// set ticks used in CSS background on the slider row (the pseudo-element uses this)
+			const ticks = Math.max(2, Math.round(Number(slider.max) / Number(slider.step)));
+			sliderRow.style.setProperty('--ticks', String(ticks));
+			slider.style.setProperty('--ticks', String(ticks));
+		};
+
+		// initialize slider max based on remembered or last value
+		setSliderMax(computeDynamicMax(Number(weightInput.value || '0'), Number(slider.step)));
+
+		// keep last successful slider value so we can return to it on rebound
+		let lastSliderValueNumber = Number(slider.value || 0);
+		let isBlocked = false; // prevent double-trigger
+		// mark pointer and keyboard interaction to allow rebound; wheel sets lastInteraction
+		slider.addEventListener('pointerdown', () => { lastInteraction = 'pointer'; });
+		slider.addEventListener('keydown', () => { lastInteraction = 'keyboard'; });
+
+		slider.oninput = () => {
+			weightInput.value = slider.value;
+			updatePreview();
+			// if slider reaches near the max, expand the maximum range
+			const cur = Number(slider.value);
+			const st = Number(slider.step) || 1;
+			const max = Number(slider.max);
+			if (cur >= max - st && !isBlocked && lastInteraction !== 'wheel') {
+				// Add a visual division and temporarily block user interaction
+				isBlocked = true;
+				const prev = lastSliderValueNumber;
+				// set CSS variables to place the ghost thumb and show the extra tick
+				const perc = max > 0 ? String((prev / max) * 100) + '%' : '0%';
+				sliderRow.style.setProperty('--prevPercent', perc);
+				// add an extra tick visually (we don't yet increase the actual max) so user sees a new division
+				sliderRow.style.setProperty('--ticks', String(Math.max(2, Math.round(max / st)) + 1));
+				// disable the slider while animation runs so user cannot instantly set the new max
+				slider.disabled = true; sliderRow.setAttribute('data-blocked', 'true');
+				// animate rebound (CSS does the actual motion) then restore
+				sliderRow.classList.add('rebound');
+				// reset the thumb position instantly to previous value, the rebound animation will visually move a ghost thumb
+				slider.value = String(prev);
+				updatePreview();
+				const done = () => {
+					// remove visual block and apply new actual max
+					sliderRow.classList.remove('rebound');
+					// compute and set actual new max now that user saw the extra tick
+					// Increase max gradually instead of jumping: add a fixed increment (20kg by default)
+					const increment = 20;
+					const incCount = Math.max(1, Math.ceil(increment / st));
+					const newMaxNumeric = Number(max) + incCount * st;
+					setSliderMax(Math.ceil(newMaxNumeric / st) * st);
+					slider.disabled = false; sliderRow.removeAttribute('data-blocked');
+					isBlocked = false;
+				};
+				// allow animation to finish and then expand
+				// shorter delay for a snappier user experience; animation in CSS runs ~300ms
+				setTimeout(done, 300);
+			}
+			lastSliderValueNumber = Number(slider.value || 0);
+		};
 
 		const stepSelector = leftField.createEl('select') as HTMLSelectElement;
 		stepSelector.add(new Option('0.25 кг', '0.25'));
@@ -330,13 +512,13 @@ class ExerciseModal extends Modal {
 		stepSelector.add(new Option('1 кг', '1'));
 		stepSelector.add(new Option('2.5 кг', '2.5'));
 		stepSelector.value = '1';
-		stepSelector.onchange = () => { slider.step = stepSelector.value; };
+		stepSelector.onchange = () => { slider.step = stepSelector.value; setSliderMax(computeDynamicMax(Number(weightInput.value || '0'), Number(slider.step))); };
 
 		const incRow = leftField.createDiv('exercise-inc-row');
 		const decBtn = incRow.createEl('button'); decBtn.setText('-');
 		const incBtn = incRow.createEl('button'); incBtn.setText('+');
-		decBtn.onclick = () => { weightInput.value = String(Number(weightInput.value) - Number(stepSelector.value)); slider.value = weightInput.value; updatePreview(); };
-		incBtn.onclick = () => { weightInput.value = String(Number(weightInput.value) + Number(stepSelector.value)); slider.value = weightInput.value; updatePreview(); };
+		decBtn.onclick = () => { weightInput.value = String(Number(weightInput.value) - Number(stepSelector.value)); slider.value = weightInput.value; lastSliderValueNumber = Number(slider.value || 0); updatePreview(); };
+		incBtn.onclick = () => { weightInput.value = String(Number(weightInput.value) + Number(stepSelector.value)); slider.value = weightInput.value; lastSliderValueNumber = Number(slider.value || 0); updatePreview(); };
 
 		const repSliderRow = rightField.createDiv('exercise-slider-row');
 		const repSlider = repSliderRow.createEl('input') as HTMLInputElement; repSlider.type = 'range';

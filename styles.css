@@ -1,38 +1,57 @@
-.exercise-modal .exercise-lastset { display:flex; align-items:center; gap:8px; margin-left:8px }
-/*
+.exercise-modal { overflow: hidden; position: relative; }
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* .exercise-lastset layout is handled in the .exercise-field / .exercise-lastset rules below */
 
-If your plugin does not need CSS, delete this file.
-
-*/
-
-/* Exercise modal layout */
 .exercise-modal .exercise-modal-layout {
 	display: flex;
 	gap: 16px;
 	align-items: stretch;
+	/* keep layout relative so absolute positioned details can sit on top */
+	position: relative;
 }
 .exercise-modal .exercise-task-list {
-	width: 40%;
+	/* left pane: ~80% of the space when visible */
+	flex: 0 0 80%;
+	width: 80%;
 	min-width: 220px;
 	background: var(--background-modifier-hover);
 	border-radius: 6px;
 	padding: 8px;
 	box-sizing: border-box;
 }
-.exercise-modal .exercise-task-list.is-collapsed { transform: translateX(-120%); opacity: 0.15; transition: transform .45s cubic-bezier(.2,.9,.3,1), opacity .45s ease; }
+.exercise-modal .exercise-task-list.is-collapsed {
+	/* fully hide the left pane from view when collapsed */
+	transform: translateX(-110%);
+	opacity: 0;
+	pointer-events: none;
+	transition: transform .45s cubic-bezier(.2,.9,.3,1), opacity .35s ease;
+}
 
 .exercise-modal .exercise-modal-layout.is-expanded .exercise-task-list {
-	width: 0; min-width: 0; opacity: 0; transform: translateX(-40px);
+	/* hide left when layout is expanded for right details */
+	flex-basis: 0; width: 0; min-width: 0; opacity: 0; transform: translateX(-100%); pointer-events:none;
 }
-.exercise-modal .exercise-modal-layout.is-expanded .exercise-details { flex: 1 1 100%; }
+.exercise-modal .exercise-modal-layout.is-expanded .exercise-details { transform: translateX(0%); z-index: 3; }
 .exercise-modal .exercise-details {
-	flex: 1;
+	/* right pane sits above the layout and is full width but mostly off-screen
+	   – only 20% will be visible unless it is expanded.
+	*/
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	box-sizing: border-box;
 	background: var(--background-secondary);
 	padding: 12px;
 	border-radius: 6px;
+	/* push 80% of itself to the right so only 20% remains visible */
+	transform: translateX(80%);
+	z-index: 2;
+}
+.exercise-modal .exercise-details.is-expanded{
+	/* fully reveal the right pane */
+	transform: translateX(0%);
 }
 .exercise-modal .exercise-list-item {
 	padding: 6px 8px;
@@ -49,30 +68,259 @@ If your plugin does not need CSS, delete this file.
 	background: var(--interactive-accent);
 	color: var(--text-accent);
 }
+.exercise-modal .exercise-tag-header {
+	margin-top: 6px;
+	margin-bottom: 4px;
+	padding: 6px 8px;
+	display:flex;
+	justify-content:space-between;
+	align-items:center;
+	background: transparent;
+	border-radius: 4px;
+}
+.exercise-modal .exercise-tag-group {
+	padding-left: 8px;
+	margin-bottom: 8px;
+	border-left: 2px solid rgba(0,0,0,0.04);
+}
+/*
+.exercise-modal .exercise-tag-group.is-collapsed { display:none; }
+*/
+.exercise-modal .exercise-tag-header strong { font-size: 0.95em; }
+.exercise-modal .exercise-tag-icon { margin-left: 8px; transition: transform .22s ease, opacity .22s ease; opacity: 0; }
+.exercise-modal .exercise-tag-header.is-collapsed .exercise-tag-icon { opacity: 1; transform: rotate(-90deg); }
+
+.exercise-modal .exercise-tag-group { transition: max-height .35s cubic-bezier(.2,.9,.3,1), opacity .25s ease; max-height: 999px; overflow: hidden; }
+.exercise-modal .exercise-tag-group.is-collapsed { max-height: 0 !important; opacity: 0; }
 .exercise-modal .exercise-list-item.is-active div { color: white; font-weight:700 }
 .exercise-modal .exercise-header {
-	display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+	display:flex; align-items:center; margin-bottom:8px; margin-right: 8px;
 }
-.exercise-modal .exercise-prefill-header { display:flex; gap:8px; justify-content:space-between; align-items:center }
+.exercise-modal .exercise-prefill-header { display:flex; gap:8px; align-items:center; margin: 8px 0 8px 0px;}
 .exercise-modal .exercise-change-btn { background: transparent; border: 1px solid var(--background-modifier-border); padding:4px 8px; border-radius:6px }
 .exercise-modal .exercise-change-btn:hover { transform: translateY(-2px); }
 .exercise-modal .exercise-reveal { margin-bottom:10px; }
-.exercise-modal .exercise-header button.exercise-refresh { border:none; background:transparent; cursor:pointer; }
+.exercise-modal .exercise-header button.exercise-refresh { border:none; background:transparent; cursor:pointer; margin-left: 8px; }
+.exercise-modal .exercise-header .exercise-collapse-all { border:none; background:transparent; cursor:pointer; margin-left:8px; }
 .exercise-modal .exercise-form label { display:block; font-size:0.85em; margin-top:8px; }
-.exercise-modal .exercise-form input { width:100%; padding:6px; margin-top:4px; box-sizing:border-box }
+.exercise-modal .exercise-form input { padding:6px; margin-top:4px; box-sizing:border-box }
 .exercise-modal .exercise-actions { display:flex; gap:8px; margin-top:12px }
-.exercise-modal .exercise-actions .mod-cta { background: var(--interactive-accent); color: var(--text-accent); border: none; padding:8px 12px; border-radius:4px; cursor:pointer }
+.exercise-modal .exercise-actions .mod-cta { background: var(--interactive-accent); color: rgba(255, 255, 255); border: none; padding:8px 12px; border-radius:4px; cursor:pointer }
 .exercise-modal .exercise-actions .mod-cta { box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
 .exercise-modal .exercise-toggle-show { position: absolute; left: 10px; bottom: 10px; display:block; opacity:0.9 }
 .exercise-modal .exercise-actions button { padding:8px 10px; border-radius:4px }
 .exercise-modal .exercise-preview { font-style:italic; font-size:0.85em; margin-top: 8px; color:var(--text-muted)}
 
 /* small controls */
-.exercise-modal .exercise-form-row { display:flex; gap:8px; align-items:center }
-.exercise-modal .exercise-field { flex:1 }
-.exercise-modal .exercise-slider-row { display:flex; gap:8px; align-items:center; margin-top:6px }
-.exercise-modal input[type="range"] { -webkit-appearance:none; height:6px; border-radius:8px; background: linear-gradient(90deg,var(--interactive-accent), #ddd); }
-.exercise-modal input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; background:var(--interactive-accent); box-shadow: 0 4px 10px rgba(0,0,0,0.25); border-radius:50%; }
+.exercise-modal .exercise-form-row {
+	/* stack fields vertically so each .exercise-field / .exercise-lastset sits under the other */
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	align-items: stretch;
+	width: 100%;
+}
+
+/* each field row becomes a horizontal row: label on the left, control on the right */
+.exercise-modal .exercise-field,
+.exercise-modal .exercise-lastset {
+	/* Row layout without grid — label left, control on the right, slider drops full width below
+	   using flex-wrap and flex-basis: 100% on the slider row. This keeps a modern, non-grid
+	   responsive layout while giving the slider maximum width under the label and control.
+	*/
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	width: 100%;
+	box-sizing: border-box;
+	flex-wrap: wrap; /* allow slider rows to wrap to their own line */
+}
+
+/* label on left - give a fixed-ish column so the control sits flush to the right */
+.exercise-modal .exercise-field > *:first-child,
+.exercise-modal .exercise-lastset > *:first-child {
+	/* force label/left cd to a fixed column */
+	/* flex: 0 0 160px; label column width */
+	/* min-width: 110px; */
+	max-width: 240px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 600;
+}
+
+/* control/input on the right takes remaining space */
+/* place second child in the right control column, fall back to last-child */
+.exercise-modal .exercise-field > *:nth-child(2),
+.exercise-modal .exercise-lastset > *:nth-child(2),
+.exercise-modal .exercise-field > *:last-child,
+.exercise-modal .exercise-lastset > *:last-child {
+	/* the right column control should take remaining space */
+	flex: 1 1 auto;
+	min-width: 0; /* allow shrinking inside flex */
+}
+
+/* Explicitly ensure the most common input/control types take the right-side column */
+.exercise-modal .exercise-field input,
+.exercise-modal .exercise-field select,
+.exercise-modal .exercise-field textarea,
+.exercise-modal .exercise-field .exercise-slider-row,
+.exercise-modal .exercise-lastset input,
+.exercise-modal .exercise-lastset select {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* if the label for lastset exists as a label element after the checkbox, place it on the left */
+.exercise-modal .exercise-lastset label { font-weight: 600 }
+.exercise-modal .exercise-lastset { justify-content: flex-start }
+/* keep checkbox and label on same line */
+.exercise-modal .exercise-lastset > div,
+.exercise-modal .exercise-lastset input[type="checkbox"] { order: 0 }
+.exercise-modal .exercise-lastset label { order: 1; margin-left: 0px }
+.exercise-modal .exercise-slider-row { display:flex; gap:8px; align-items:center; margin:6px; width:100%; position:relative; flex-basis: 100% }
+
+/* Keep the label and the primary numeric input together on the same line
+   — numeric inputs always sit to the right of the label (do not wrap under it).
+   Other control types (select, increment buttons) can wrap to a second line
+   but the slider takes full width below them.
+*/
+.exercise-modal .exercise-field > input[type="number"],
+.exercise-modal .exercise-field > input[type="text"],
+.exercise-modal .exercise-field > textarea {
+	order: 1; /* show as primary control after the label */
+	flex: 1 1 auto; /* occupy remaining space to the right of the label */
+	min-width: 120px;
+}
+
+/* push secondary controls (select, inc row) after the number input */
+.exercise-modal .exercise-field > select,
+.exercise-modal .exercise-field > .exercise-inc-row {
+	order: 2;
+}
+
+/* ensure the slider row is always on its own full width row below */
+.exercise-modal .exercise-field .exercise-slider-row,
+.exercise-modal .exercise-lastset .exercise-slider-row {
+	order: 3;
+	flex-basis: 100%;
+}
+/* ensure slider occupies the full width and visually fills the control space */
+.exercise-modal input[type="range"] {
+	appearance: none; -webkit-appearance:none;
+	height: 8px;
+	border-radius: 999px;
+	background: linear-gradient(90deg,var(--interactive-accent), #ddd);
+	width: 100%;
+	margin: 0; /* control spacing via flex container
+				 * width:100% ensures the slider fills available space on the right
+				 */
+	position: relative;
+	z-index: 2; /* above the tick background */
+}
+.exercise-modal input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; background:var(--interactive-accent); box-shadow: 0 5px 12px rgba(0,0,0,0.2); border-radius:50%; border: 3px solid rgba(255,255,255,0.9); }
+.exercise-modal input[type="range"]::-moz-range-thumb { width:18px; height:18px; background:var(--interactive-accent); box-shadow: 0 5px 12px rgba(0,0,0,0.2); border-radius:50%; border: 3px solid rgba(255,255,255,0.9); }
+
+/* subtle ticks under the slider to create nice divisions */
+.exercise-modal .exercise-slider-row::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: calc(50% + 1px);
+	height: 18px; /* tick stripe area with variegated markers */
+	z-index: 1;
+	border-radius: 999px;
+	/* Lively ticks/markers - combines a repeating thin short bar + a soft underlay
+	   first gradient draws small vertical dividers; second adds a warm accent band
+	   every N pixels to make the control feel energetic.
+	*/
+	/* major ticks (one per `--ticks`) are drawn first; fall back to subtle repeating
+	 * pattern when ticks are not set. background-size spreads ticks evenly.
+	 */
+	background-image:
+		linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px),
+		repeating-linear-gradient(to right, rgba(0,0,0,0.08) 0 2px, transparent 2px 24px),
+		repeating-linear-gradient(to right, rgba(255,255,255,0.06) 0 4px, transparent 4px 40px),
+		linear-gradient(180deg, transparent, rgba(0,0,0,0.03));
+	background-position: 0 0, 0 0, 0 0;
+	/* first layer uses --ticks to control spacing; default to 40 for older styles */
+	background-size: calc(100% / var(--ticks, 40)) 100%, auto, auto, 100% 18px;
+	pointer-events: none;
+	transition: opacity .22s ease, transform .25s cubic-bezier(.2,.9,.3,1);
+}
+
+.exercise-modal .exercise-slider-row:hover::before {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+/* Ghost thumb and rebound animation when user hits max */
+.exercise-modal .exercise-slider-row::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	/* start slightly elevated so it settles into place; we animate transform for smoother effect */
+	transform: translate(-50%, -40%) scale(1.06);
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+	opacity: 0;
+	pointer-events: none;
+	z-index: 3;
+	/* start at the right edge; the .rebound class will move it to --prevPercent */
+	left: 100%;
+	/* smoother, slightly faster and more natural easing */
+	transition: left .32s cubic-bezier(.22, .9, .28, 1), opacity .18s ease, transform .32s cubic-bezier(.22, .9, .28, 1);
+}
+
+.exercise-modal .exercise-slider-row.rebound::after {
+	/* animate from the right edge to the previous position and settle */
+	left: var(--prevPercent, 100%);
+	opacity: 1;
+	transform: translate(-50%, -50%) scale(1);
+}
+
+/* block user when slider expansion is in progress */
+.exercise-modal .exercise-slider-row[data-blocked="true"] input[type="range"] {
+	pointer-events: none;
+	opacity: 0.6;
+}
+
+/* when slider sits inside the .exercise-field, ensure the input has no extra margins */
+.exercise-modal .exercise-field input[type="range"],
+.exercise-modal .exercise-lastset input[type="range"] {
+	margin-left: 0; /* full-width slider uses the right-side control column */
+	width: 100%; /* slider fills the entire control row */
+	display: block;
+}
+
+/* Custom square checkbox to match the UI style */
+.exercise-modal input[type="checkbox"] {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+	border: 1px solid rgba(0,0,0,0.12);
+	background: rgba(255,255,255,0.8);
+	display: inline-block;
+	vertical-align: middle;
+}
+.exercise-modal input[type="checkbox"]:checked {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+.exercise-modal input[type="checkbox"]:checked::after {
+	content: "\2713"; /* checkmark */
+	color: white;
+	font-size: 12px;
+	display: block;
+	text-align: center;
+	line-height: 18px;
+}
 .exercise-modal .exercise-inc-row button { width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px }
 .exercise-modal select { border-radius:6px; padding:6px 8px }
 
