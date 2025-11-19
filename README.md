@@ -1,32 +1,62 @@
-# Dynamic slider behavior
+# Obsidian Recording Workouts
 
+Obsidian Recording Workouts — простой и локальный плагин для Obsidian, который помогает вести журнал тренировок прямо в вашем хранилище (vault). Плагин предоставляет всплывающую форму (modal) для быстрой записи подходов, весов, повторений и тегов — всё это хранится в обычных Markdown-файлах в вашей заметочной базе.
 
-This plugin's weight slider now scales dynamically:
+## Ключевые возможности
+- Быстрое логирование подходов (weight/reps) через modal и/или команду.
+- Сохранение данных прямо в Markdown-файл, указанный в настройках (по умолчанию `Тренировки/Все упражнения.md`).
+- Группировка упражнений по тегам и сохранение состояния свернутых групп.
+- Небольшие UI-улучшения: динамический слайдер веса (плавное увеличение макс. значения), клавиши и иконки для удобного доступа.
+- Полностью локальная работа — никаких внешних API или облачных сервисов.
 
-- For small weights the max is kept compact (e.g., 20kg -> max 40kg). The slider's max is computed from the current weight and step value.
-- When you drag the slider to the end, the control automatically expands the maximum so you can select higher weights.
-- The UI draws major ticks using a dynamic CSS variable `--ticks` — this adapts as the maximum changes.
+## Установка
+1. Клонируйте репозиторий в папку плагинов Obsidian:
 
-If you want to customize behavior, edit the `computeDynamicMax` function in `main.ts` to tweak thresholds and scaling.
+```powershell
+# в Powershell
+cd <Vault>/.obsidian/plugins
+git clone https://github.com/GoodGame563/obsidian-extension-for-recording-workouts.git
+```
 
-## Blocked-at-max and rebound
+2. Установите зависимости и соберите плагин:
 
-When the user drags the weight slider to the very end, the UI now:
+```powershell
+npm install
+npm run build
+```
 
-- Temporarily adds a visual division (an extra tick) to indicate the slider can expand.
-- Disables the slider for a short moment so the user can't immediately set the new maximum.
-- Shows a short rebound animation that moves a ghost thumb back to the previous value.
- 
-## Gradual expansion increments
+3. Перезапустите Obsidian и активируйте плагин в Settings → Community plugins.
 
-The slider now expands in small increments (20 kg by default) when the user reaches the end.
-This avoids large jumps such as from 40 to 150; instead 40 → 60 → 80 etc. The increment is rounded to the
-current `step` value so the slider remains aligned with chosen precision (for example, 0.5 kg step).
+## Использование
+- Откройте палитру команд и выберите "Open exercise modal (log set)" или нажмите иконку в правой части (ribbon) — появится форма для записи подхода.
+- Введите упражнение (или выберите из списка), вес и количество повторений. Можно добавить теги через `#tag`.
+- Нажмите "Save" — запись будет добавлена в файл, указанный в настройках.
 
-If you want a different increment, update the `increment` value in `main.ts` at the expansion point.
-- After the animation, the real increased maximum is applied and the slider is re-enabled.
+## Настройки
+Перейдите в Settings → Community plugins → Obsidian Recording Workouts → Options, чтобы настроить:
+- `Tasks file path` — Markdown-файл для хранения упражнений/сетов (по умолчанию `Тренировки/Все упражнения.md`).
+- `Remember last exercise` — если включено, плагин будет автоматически подставлять последнее упражнение.
+- `Modal size` и `Modal spacing` — управление размером/интервалом UI.
 
-You can tweak the timing and animation in `styles.css` and `main.ts` — set the delay in the `setTimeout(...)` call (default 300ms) or change the easing in the `.rebound::after` rule.
+## Команды
+- `Open exercise modal (log set)` — открыть modal для ввода сета.
+- `Sample editor command` — пример команды, можно переназвать на что-то более подходящее (в `main.ts`).
 
-Note: changes by mouse wheel (scroll) no longer trigger the rebound animation — pointer (drag) and keyboard interactions still do. This avoids accidental triggers when the user tries to bump the number quickly with the scroll wheel.
+## Разработка
+Если вы хотите внести изменения или улучшения:
+
+```powershell
+npm install
+npm run dev  # watch + сборка
+```
+
+Рекомендую разбивать функциональность на отдельные модули: `settings.ts`, `commands/`, `ui/`.
+
+## Лицензия
+
+Этот проект распространяется под лицензией MIT — разрешено свободное использование, модификация и распространение при сохранении указания авторства.
+
+© 2025 GoodGame563
+
+<!-- Removed the original sample plugin dynamic slider section; plugin README now focuses on Obsidian Recording Workouts features and usage. -->
 
