@@ -1,60 +1,66 @@
 # Obsidian Recording Workouts
 
-Obsidian Recording Workouts — простой и локальный плагин для Obsidian, который помогает вести журнал тренировок прямо в вашем хранилище (vault). Плагин предоставляет всплывающую форму (modal) для быстрой записи подходов, весов, повторений и тегов — всё это хранится в обычных Markdown-файлах в вашей заметочной базе.
+Obsidian Recording Workouts is a small, local Obsidian plugin that helps you keep a workout log directly in your vault. The plugin provides a modal for quickly recording sets, weights, reps and tags — all stored in plain Markdown files inside your notes.
 
-## Ключевые возможности
-- Быстрое логирование подходов (weight/reps) через modal и/или команду.
-- Сохранение данных прямо в Markdown-файл, указанный в настройках (по умолчанию `Тренировки/Все упражнения.md`).
-- Группировка упражнений по тегам и сохранение состояния свернутых групп.
-- Небольшие UI-улучшения: динамический слайдер веса (плавное увеличение макс. значения), клавиши и иконки для удобного доступа.
-- Полностью локальная работа — никаких внешних API или облачных сервисов.
+## Key features
 
-## Установка
-1. Клонируйте репозиторий в папку плагинов Obsidian:
+- Fast set logging (weight/reps) via a modal or command.
+- Save workout entries directly to a Markdown file configured in settings (default: `Тренировки/Все упражнения.md`).
+- Group exercises by tags and persist collapsed group state.
+- UI niceties: dynamic weight slider with gradual max increase, keyboard support and a ribbon icon for quick access.
+- Fully local — no external API calls or cloud services.
+
+## Installation
+
+1. Clone the repository into your Obsidian plugins folder:
 
 ```powershell
-# в Powershell
 cd <Vault>/.obsidian/plugins
 git clone https://github.com/GoodGame563/obsidian-extension-for-recording-workouts.git
 ```
 
-2. Установите зависимости и соберите плагин:
+1. Install dependencies and build the plugin:
 
 ```powershell
 npm install
 npm run build
 ```
 
-3. Перезапустите Obsidian и активируйте плагин в Settings → Community plugins.
+1. Restart Obsidian and enable the plugin under Settings → Community plugins.
 
-## Использование
-- Откройте палитру команд и выберите "Open exercise modal (log set)" или нажмите иконку в правой части (ribbon) — появится форма для записи подхода.
-- Введите упражнение (или выберите из списка), вес и количество повторений. Можно добавить теги через `#tag`.
-- Нажмите "Save" — запись будет добавлена в файл, указанный в настройках.
+## Usage
 
-## Настройки
-Перейдите в Settings → Community plugins → Obsidian Recording Workouts → Options, чтобы настроить:
-- `Tasks file path` — Markdown-файл для хранения упражнений/сетов (по умолчанию `Тренировки/Все упражнения.md`).
-- `Remember last exercise` — если включено, плагин будет автоматически подставлять последнее упражнение.
-- `Modal size` и `Modal spacing` — управление размером/интервалом UI.
+- Open the command palette and run `Open exercise modal (log set)` or click the ribbon icon to open the entry modal.
+- Enter an exercise name (or pick an existing one), weight, repetitions, and optional tags like `#legs` or `#upperbody`.
+- Press Save to append the entry to the configured file.
 
-## Команды
-- `Open exercise modal (log set)` — открыть modal для ввода сета.
-- `Sample editor command` — пример команды, можно переназвать на что-то более подходящее (в `main.ts`).
+## Settings
 
-## Разработка
-Если вы хотите внести изменения или улучшения:
+Go to Settings → Community plugins → Obsidian Recording Workouts → Options to configure:
+
+- `Tasks file path` — Markdown file for storing recorded sets (default: `Тренировки/Все упражнения.md`).
+- `Remember last exercise` — if enabled, the plugin pre-fills the modal with the last-used exercise.
+- `Modal size` and `Modal spacing` — control the modal's appearance and spacing.
+
+## Commands
+
+- `Open exercise modal (log set)` — open a modal to record a set.
+- `Sample editor command` — example command (consider renaming to a relevant label in `main.ts`).
+
+## Development
+
+To modify and build the plugin locally:
 
 ```powershell
 npm install
-npm run dev  # watch + сборка
+npm run dev  # watch build
 ```
 
-Рекомендую разбивать функциональность на отдельные модули: `settings.ts`, `commands/`, `ui/`.
+Code structure suggestion: `settings.ts`, `commands/`, `ui/` for modular organization.
 
-## Лицензия
+## License
 
-Этот проект распространяется под лицензией MIT — разрешено свободное использование, модификация и распространение при сохранении указания авторства.
+This project is available under the MIT license — free to use, modify and distribute with attribution.
 
 © 2025 GoodGame563
 
